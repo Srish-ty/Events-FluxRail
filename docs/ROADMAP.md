@@ -28,7 +28,7 @@ git diff --cached --name-only
 
 **Dependencies:** approved Phase 0 design; supported Go, Docker/Compose; native ARM64 or AMD64 environment.
 
-**Tasks:** initialize the Go module and only useful directories; implement typed configuration, JSON slog, minimal entry points, database/broker connectivity, health/readiness, and versioned migrations from the LLD. Compose supplies PostgreSQL, single-node KRaft Kafka, persistent volumes, explicit topic creation/listeners, and separate host/container addresses. Verify image manifests and pin exact versions/digests; capture module requirements and image compatibility in a development runbook. Provide a smoke script and example environment file with placeholders only.
+**Tasks:** initialize the Go module and only useful directories; implement typed configuration, JSON slog, minimal entry points, a Gin router hosted by a configured HTTP server, database/broker connectivity, health/readiness, and versioned migrations from the LLD. Pin Gin alongside the supported Go toolchain. Compose supplies PostgreSQL, single-node KRaft Kafka, persistent volumes, explicit topic creation/listeners, and separate host/container addresses. Verify image manifests and pin exact versions/digests; capture module requirements and image compatibility in a development runbook. Provide a smoke script and example environment file with placeholders only.
 
 **Artifacts:** `go.mod`, `go.sum`, entry points, config/logging/storage foundation, `migrations/`, `deployments/docker/compose.yaml`, `.env.example`, `.gitignore`, and smoke tests/runbook.
 
@@ -50,9 +50,9 @@ The migration runner and smoke script must have exact documented invocations whe
 
 **Dependencies:** Phase 1 healthy dependencies and migrations.
 
-**Tasks:** implement immediate submission, GET detail/list, typed validation, request limits, keyset pagination, normalized request hashing, idempotency races, transactional job/outbox creation, outbox leasing, publication/backoff, and controller entry point. Future scheduling/cancel/retry inputs must be explicitly rejected until Phase 4, not accepted and stranded. Publish ready messages without starting execution services.
+**Tasks:** implement Gin route groups and request-ID/slog/recovery/error middleware, immediate submission, GET detail/list, typed validation, request limits, keyset pagination, normalized request hashing, idempotency races, transactional job/outbox creation, outbox leasing, publication/backoff, and controller entry point. Future scheduling/cancel/retry inputs must be explicitly rejected until Phase 4, not accepted and stranded. Publish ready messages without starting execution services.
 
-**Artifacts:** API/domain/storage/outbox/Kafka packages, API contract tests, real database/broker integration tests, sample requests, and publication-failure runbook.
+**Artifacts:** API/domain/storage/outbox/Kafka packages, Gin/httptest API contract tests, real database/broker integration tests, sample requests, and publication-failure runbook.
 
 **Acceptance:** matching concurrent idempotency requests create one job; mismatched reuse returns `409`; rollback produces neither job nor ready intent; accepted jobs eventually reach Kafka after broker recovery. Killing the dispatcher after acknowledgement but before marking publication produces duplicate delivery without losing the job. List filters/cursors remain consistent and bounded.
 

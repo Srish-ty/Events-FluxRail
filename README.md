@@ -69,7 +69,7 @@ Delayed jobs and retries use `next_run_at` in PostgreSQL. Consumers do not sleep
 
 | Area | Choice | Purpose |
 |---|---|---|
-| Language and HTTP | Go, `net/http` | Small binaries, cancellation contexts, standard routing and HTTP timeouts |
+| Language and HTTP | Go, Gin | REST routing, middleware, request validation and JSON responses; explicit server timeouts and shutdown |
 | Kafka client | franz-go | Explicit producer acknowledgements, consumer offsets, and rebalance control; [comparison](docs/adr/0001-kafka-selection.md) with IBM Sarama |
 | Messaging | Apache Kafka, KRaft | Durable partitioned transport and consumer-group distribution |
 | Persistence | PostgreSQL, pgx | Atomic state changes, leases, schedules, and outbox transactions |

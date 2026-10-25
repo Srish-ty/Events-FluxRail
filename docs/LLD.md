@@ -5,10 +5,10 @@ Status: proposed Phase 0 implementation contract. SQL and pseudocode are design 
 ## Proposed Go layout
 
 ```text
-cmd/api/                 HTTP server entry point
+cmd/api/                 Gin router and HTTP server entry point
 cmd/worker/              Consumer group and handler execution entry point
 cmd/controller/          Outbox, scheduler, and recovery loops
-internal/api/            Routes, DTOs, validation, error mapping
+internal/api/            Gin routes/middleware, DTOs, validation, error mapping
 internal/jobs/           States, transition rules, retry policy, handler contracts
 internal/handlers/       Fixed built-in handlers
 internal/worker/         Partition loops, semaphore, leases, shutdown
@@ -170,6 +170,14 @@ CREATE INDEX outbox_job_idx ON outbox_events(job_id);
 Unique non-null idempotency keys resolve concurrent API requests. Null keys permit independent submissions. No automatic job or key deletion in the MVP; if retention is later introduced, document when idempotency protection expires. Proposed maintenance retains published normal outbox rows seven days and attempts/jobs for the entire demo; cleanup never deletes unpublished events or nonterminal jobs. Retain quarantine source-position deduplication tombstones indefinitely in the MVP, even after payload cleanup, so a later replay cannot create a second quarantine intent. Cleanup must preserve enough terminal DLQ metadata to report publication status after the full envelope is pruned. Backups and retention tooling are later operational work.
 
 Partial indexes serve due scans, expired leases, and queued repairs. Primary-key claims need no status-only index. All multi-row loops lock bounded batches ordered by due time and ID with `FOR UPDATE SKIP LOCKED`. Lock jobs before their attempt rows everywhere to avoid inconsistent lock ordering. Use short transactions, parameterized SQL, bounded retries for deadlocks/serialization failures, and a statement timeout.
+
+## Gin HTTP integration
+
+Construct the public router with `gin.New()` and explicitly register request-ID, structured slog access logging, panic recovery and normalized error handling middleware. Group public routes under `/api/v1`; Gin path parameters such as `:id` implement the documented `{id}` endpoint notation. Serve the engine through a configured `http.Server` so the existing timeout and bounded shutdown policies apply. Keep the administrative listener separate; its health/metrics handlers may remain standard HTTP handlers.
+
+Pass `c.Request.Context()` and typed, validated inputs to application/storage methods; do not pass or retain `*gin.Context` in jobs, worker tasks or background goroutines. Durable jobs outlive the submission request and execute under worker-owned contexts. Validate/decode the bounded JSON body through the explicit strict decoder described below, rather than relying on default binding to reject duplicate keys or preserve numeric precision. Validation and recovery must emit the documented JSON error shape. Configure `NoRoute` and `NoMethod` for JSON 404/405 responses, and handle errors before writing response headers. Disable trusted-proxy header interpretation for direct local access; configure an explicit proxy allowlist only if a trusted proxy is introduced.
+
+Verify HTTP behavior through the Gin engine using `httptest`, including validation, content-type/body limits, request cancellation, panic/error responses and shutdown. No framework context escapes the transport layer. [Gin context guidance](https://github.com/gin-gonic/website/blob/master/src/content/docs/en/docs/server-config/context.md)
 
 ## REST API
 

@@ -29,6 +29,14 @@ Functional requirements are defined by the [LLD](LLD.md). Operational requiremen
 
 Three Go processes permit independent scaling without turning every loop into a service. Multiple controller replicas are safe only through database row locking and expiring outbox claims; no leader election is required. Business rules reside in shared internal packages, not HTTP handlers or Kafka callbacks.
 
+## HTTP framework decision
+
+Use **Gin** (`github.com/gin-gonic/gin`) for REST routing and HTTP middleware. It fits the API's route groups, validation and consistent JSON errors while integrating with standard Go HTTP handlers, request contexts and server lifecycle controls. Mount the Gin engine on an explicitly configured `http.Server` for timeouts and graceful shutdown; `net/http` remains the underlying server, rather than the application routing choice. [Gin server configuration](https://gin-gonic.com/en/docs/server-config/custom-http-config/)
+
+Fiber is a viable alternative built on fasthttp, with compatibility/adaptor facilities for standard HTTP handlers. Choose Gin to keep request-context propagation, Prometheus handlers and later tracing on the standard HTTP integration path. This is an integration and maintenance decision, not a claim of measured performance superiority. [Fiber adaptor documentation](https://docs.gofiber.io/middleware/adaptor/)
+
+Gin stays at the transport boundary: jobs, storage and workers accept standard `context.Context` and typed inputs, without depending on Gin. Pin a compatible stable Gin release with the Go toolchain in Phase 1. The framework change preserves all REST endpoints and reliability contracts.
+
 ## Overall architecture
 
 ```mermaid
